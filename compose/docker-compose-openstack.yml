@@ -1,0 +1,10 @@
+mysql:
+  build: ../openstack-node-containers/mysql-docker
+  container_name: mysql
+  environment:
+    MYSQL_ROOT_PASSWORD:
+
+keystone:
+  build: ../openstack-node-containers/keystone-docker
+  container_name: keystone
+  net: container:mysql
