@@ -1,5 +1,5 @@
 openstack:
-  build: ../openstack-node-containers/all-openstack-docker/docker-files/kilo/controller/
+  build: ../../openstack-controller-docker/docker-files/kilo/controller/
   hostname: openstack
   container_name: openstack
   environment:
@@ -24,13 +24,14 @@ openstack:
     KEYSTONE_VERSION: v3
 
 ifmap:
-  image: ifmap-docker
+  build: ../../config-node-containers/ifmap-docker
   hostname: contrail
   container_name: ifmap
   net: container:contrail
 
 contrail:
-  build: ../config-node-containers/contrail-api-docker
+  build: ../../config-node-containers/contrail-api-docker
+  dockerfile: Dockerfile.r220
   hostname: contrail
   container_name: contrail
   environment:
@@ -41,7 +42,7 @@ contrail:
     ADMIN_TENANT_NAME: admin
 
 cassandra:
-  build: ../config-node-containers/cassandra-docker
+  build: ../../config-node-containers/cassandra-docker
   hostname: contrail
   container_name: cassandra
   net: container:contrail
@@ -50,13 +51,13 @@ cassandra:
     CASSANDRA_BROADCAST_ADDRESS: auto
 
 zookeeper:
-  image: zookeeper-docker
+  build:  ../../config-node-containers/zookeeper-docker
   hostname: contrail
   container_name: zookeeper
   net: container:contrail
 
 rabbitmq:
-  image: rabbitmq-docker
+  build: ../../config-node-containers/rabbitmq-docker
   hostname: contrail
   container_name: rabbitmq
   net: container:contrail
@@ -64,7 +65,7 @@ rabbitmq:
 
 contrail-schema:
   #image: contrail-schema-docker
-  build: ../config-node-containers/contrail-schema-docker
+  build: ../../config-node-containers/contrail-schema-docker
   hostname: contrail
   container_name: contrail-schema
   net: container:contrail
@@ -72,20 +73,20 @@ contrail-schema:
 
 contrail-svc-monitor:
   #image: contrail-svc-monitor-docker
-  build: ../config-node-containers/contrail-svc-monitor-docker
+  build: ../../config-node-containers/contrail-svc-monitor-docker
   hostname: contrail
   container_name: contrail-svc-monitor
   net: container:contrail
   entrypoint: ["/usr/bin/contrail-svc-monitor"]
 
 contrail-discovery:
-  build: ../config-node-containers/contrail-discovery-docker
+  build: ../../config-node-containers/contrail-discovery-docker
   hostname: contrail
   container_name: contrail-discovery
   net: container:contrail
 
 neutron:
-  build: ../config-node-containers/neutron-docker
+  build: ../../config-node-containers/neutron-docker
   hostname: contrail
   container_name: neutron
   net: container:contrail
