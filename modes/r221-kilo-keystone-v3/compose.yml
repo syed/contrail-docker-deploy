@@ -1,0 +1,97 @@
+openstack:
+  build: ../../openstack-controller-docker/docker-files/kilo/controller/
+  hostname: openstack
+  container_name: openstack
+  environment:
+    MYSQL_ROOT_PASSWORD: c0ntrail123
+    RABBIT_PASS: c0ntrail123
+    KEYSTONE_DBPASS: c0ntrail123
+    GLANCE_DBPASS: c0ntrail123
+    NOVA_DBPASS: c0ntrail123
+    CINDER_DBPASS: c0ntrail123
+    HEAT_DBPASS: c0ntrail123
+    KEYSTONE_PASS: c0ntrail123
+    GLANCE_PASS: c0ntrail123
+    NOVA_PASS: c0ntrail123
+    NEUTRON_PASS: c0ntrail123
+    CINDER_PASS: c0ntrail123
+    HEAT_PASS: c0ntrail123
+    ADMIN_TENANT_NAME: admin
+    ADMIN_TOKEN: c0ntrail123
+    ADMIN_PASS: c0ntrail123
+    DEMO_PASS: c0ntrail123
+    REGION_NAME: RegionOne
+    KEYSTONE_VERSION: v3
+    POLICY_FILE: /etc/keystone/policy.v3.json
+
+ifmap:
+  build: ../../config-node-containers/ifmap-docker
+  hostname: contrail
+  container_name: ifmap
+  net: container:contrail
+
+contrail:
+  environment:
+    REPO_URL: "http://10.84.35.28:8080/juno-R2.20-102-juno/"
+    REPO_DISTRO: opencontrail-R2.20
+    KEYSTONE: 1
+    ADMIN_USER: admin
+    ADMIN_PASS: c0ntrail123
+    ADMIN_TOKEN: c0ntrail123
+    ADMIN_TENANT_NAME: admin
+  build: ../../config-node-containers/contrail-api-docker
+  dockerfile: Dockerfile.r221
+  hostname: contrail
+  container_name: contrail
+
+cassandra:
+  build: ../../config-node-containers/cassandra-docker
+  hostname: contrail
+  container_name: cassandra
+  net: container:contrail
+  environment:
+    CASSANDRA_LISTEN_ADDRESS: auto
+    CASSANDRA_BROADCAST_ADDRESS: auto
+
+zookeeper:
+  build:  ../../config-node-containers/zookeeper-docker
+  hostname: contrail
+  container_name: zookeeper
+  net: container:contrail
+
+rabbitmq:
+  build: ../../config-node-containers/rabbitmq-docker
+  hostname: contrail
+  container_name: rabbitmq
+  net: container:contrail
+
+
+contrail-schema:
+  #image: contrail-schema-docker
+  build: ../../config-node-containers/contrail-schema-docker
+  hostname: contrail
+  container_name: contrail-schema
+  net: container:contrail
+  entrypoint: ["/usr/bin/contrail-schema"]
+
+contrail-svc-monitor:
+  #image: contrail-svc-monitor-docker
+  build: ../../config-node-containers/contrail-svc-monitor-docker
+  hostname: contrail
+  container_name: contrail-svc-monitor
+  net: container:contrail
+  entrypoint: ["/usr/bin/contrail-svc-monitor"]
+
+contrail-discovery:
+  build: ../../config-node-containers/contrail-discovery-docker
+  hostname: contrail
+  container_name: contrail-discovery
+  net: container:contrail
+
+neutron:
+  build: ../../config-node-containers/neutron-docker
+  hostname: contrail
+  container_name: neutron
+  net: container:contrail
+  environment:
+    NEUTRON_PASS: c0ntrail123
