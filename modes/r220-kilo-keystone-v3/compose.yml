@@ -22,6 +22,7 @@ openstack:
     DEMO_PASS: c0ntrail123
     REGION_NAME: RegionOne
     KEYSTONE_VERSION: v3
+    POLICY_FILE: /etc/keystone/policy.v3.json
 
 ifmap:
   build: ../../config-node-containers/ifmap-docker
