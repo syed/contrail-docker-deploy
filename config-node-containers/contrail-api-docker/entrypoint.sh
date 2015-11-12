@@ -12,6 +12,9 @@ if [ "$KEYSTONE" ]; then
     if [ "$ADMIN_TOKEN" ]; then
         crudini --set /etc/contrail/contrail-api.conf KEYSTONE admin_token ${ADMIN_TOKEN}
     fi
+    if [ "$RABBIT_SERVERS" ]; then
+        crudini --set /etc/contrail/contrail-api.conf DEFAULTS rabbit_server ${RABBIT_SERVERS}
+    fi
 fi
 
 /usr/bin/contrail-api --conf_file /etc/contrail/contrail-api.conf

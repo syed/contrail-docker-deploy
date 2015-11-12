@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
+set -x
+
+env
 
 if [ "$RABBITMQ_ERLANG_COOKIE" ]; then
 	cookieFile='/var/lib/rabbitmq/.erlang.cookie'
@@ -22,6 +25,8 @@ if [ "$1" = 'rabbitmq-server' ]; then
 		default_vhost
 		default_user
 		default_pass
+                cluster_nodes
+                cluster_partition_handling
 	)
 
 	haveConfig=
@@ -44,8 +49,12 @@ if [ "$1" = 'rabbitmq-server' ]; then
 			var="RABBITMQ_${conf^^}"
 			val="${!var}"
 			[ "$val" ] || continue
+                        # << below doesn't work with tuples
+			#cat >> /etc/rabbitmq/rabbitmq.config <<-EOC
+			#      {$conf, <<"$val">>},
+			#EOC
 			cat >> /etc/rabbitmq/rabbitmq.config <<-EOC
-			      {$conf, <<"$val">>},
+			      {$conf, $val},
 			EOC
 		done
 		cat >> /etc/rabbitmq/rabbitmq.config <<-'EOF'

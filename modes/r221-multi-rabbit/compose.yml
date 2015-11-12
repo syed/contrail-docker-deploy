@@ -1,0 +1,122 @@
+openstack:
+  build: ../../openstack-controller-docker/docker-files/kilo/controller/
+  hostname: openstack
+  environment:
+    MYSQL_ROOT_PASSWORD: c0ntrail123
+    RABBIT_PASS: c0ntrail123
+    KEYSTONE_DBPASS: c0ntrail123
+    GLANCE_DBPASS: c0ntrail123
+    NOVA_DBPASS: c0ntrail123
+    CINDER_DBPASS: c0ntrail123
+    HEAT_DBPASS: c0ntrail123
+    KEYSTONE_PASS: c0ntrail123
+    GLANCE_PASS: c0ntrail123
+    NOVA_PASS: c0ntrail123
+    NEUTRON_PASS: c0ntrail123
+    CINDER_PASS: c0ntrail123
+    HEAT_PASS: c0ntrail123
+    ADMIN_TENANT_NAME: admin
+    ADMIN_TOKEN: c0ntrail123
+    ADMIN_PASS: c0ntrail123
+    DEMO_PASS: c0ntrail123
+    REGION_NAME: RegionOne
+    KEYSTONE_VERSION: v3
+    POLICY_FILE: /etc/keystone/policy.v3.json
+
+ifmap:
+  build: ../../config-node-containers/ifmap-docker
+  #hostname: contrail
+  container_name: ifmap
+  net: container:contrail
+
+contrail:
+  environment:
+    REPO_URL: "http://hajay-repo:8080/juno-R2.21.x-7-juno/"
+    REPO_DISTRO: opencontrail-R2.21.x
+    KEYSTONE: 1
+    ADMIN_USER: admin
+    ADMIN_PASS: c0ntrail123
+    ADMIN_TOKEN: c0ntrail123
+    ADMIN_TENANT_NAME: admin
+    RABBIT_SERVERS: rabbitmq01:5672,rabbitmq02:5672,rabbitmq03:5672
+  build: ../../config-node-containers/contrail-api-docker
+  dockerfile: Dockerfile.r221
+  hostname: contrail
+  container_name: contrail
+  links:
+    - rabbitmq01
+    - rabbitmq02
+    - rabbitmq03
+    - openstack
+
+cassandra:
+  build: ../../config-node-containers/cassandra-docker
+  dockerfile: Dockerfile.contrail
+  #hostname: contrail
+  net: container:contrail
+  volumes: 
+    - ~/datadir/:/import-data
+  environment:
+    CASSANDRA_LISTEN_ADDRESS: auto
+    CASSANDRA_BROADCAST_ADDRESS: auto
+
+zookeeper:
+  build:  ../../config-node-containers/zookeeper-docker
+  #hostname: contrail
+  net: container:contrail
+
+rabbitmq01:
+  build: ../../config-node-containers/rabbitmq-docker
+  hostname: rabbitmq01
+  container_name: rabbitmq01
+  environment:
+    RABBITMQ_ERLANG_COOKIE: contrail123 # TODO should be $PWD
+    RABBITMQ_CLUSTER_NODES: "{['rabbit@rabbitmq01', 'rabbit@rabbitmq02', 'rabbit@rabbitmq03'], disc}"
+    RABBITMQ_CLUSTER_PARTITION_HANDLING: autoheal
+
+rabbitmq02:
+  build: ../../config-node-containers/rabbitmq-docker
+  hostname: rabbitmq02
+  environment:
+    RABBITMQ_ERLANG_COOKIE: contrail123 # TODO should be $PWD
+    RABBITMQ_CLUSTER_NODES: "{['rabbit@rabbitmq01', 'rabbit@rabbitmq02', 'rabbit@rabbitmq03'], disc}"
+    RABBITMQ_CLUSTER_PARTITION_HANDLING: autoheal
+  links:
+    - rabbitmq01
+
+rabbitmq03:
+  build: ../../config-node-containers/rabbitmq-docker
+  hostname: rabbitmq03
+  environment:
+    RABBITMQ_ERLANG_COOKIE: contrail123 # TODO should be $PWD
+    RABBITMQ_CLUSTER_NODES: "{['rabbit@rabbitmq01', 'rabbit@rabbitmq02', 'rabbit@rabbitmq03'], disc}"
+    RABBITMQ_CLUSTER_PARTITION_HANDLING: autoheal
+  links:
+    - rabbitmq01
+    - rabbitmq02
+
+contrail-schema:
+  #image: contrail-schema-docker
+  build: ../../config-node-containers/contrail-schema-docker
+  #hostname: contrail
+  net: container:contrail
+  entrypoint: ["/usr/bin/contrail-schema"]
+
+contrail-svc-monitor:
+  #image: contrail-svc-monitor-docker
+  build: ../../config-node-containers/contrail-svc-monitor-docker
+  #hostname: contrail
+  net: container:contrail
+  entrypoint: ["/usr/bin/contrail-svc-monitor"]
+
+contrail-discovery:
+  build: ../../config-node-containers/contrail-discovery-docker
+  #hostname: contrail
+  net: container:contrail
+
+neutron:
+  build: ../../config-node-containers/neutron-docker
+  #hostname: contrail
+  net: container:contrail
+  environment:
+    NEUTRON_PASS: c0ntrail123
