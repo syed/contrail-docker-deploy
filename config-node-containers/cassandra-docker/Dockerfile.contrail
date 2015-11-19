@@ -1,0 +1,24 @@
+FROM ubuntu:14.04
+
+RUN apt-get update
+RUN echo "deb http://hajay-repo:8080/juno-R2.21.x-7-juno/ opencontrail-R2.21.x main" > /etc/apt/sources.list.d/opencontrail.list
+RUN apt-get update
+RUN apt-get install -y crudini
+RUN apt-get install -y --allow-unauthenticated contrail-openstack-database
+ENV JVM_EXTRA_OPTS -Xss512k
+
+ENV CASSANDRA_CONFIG /etc/cassandra
+
+# listen to all rpc
+RUN sed -ri ' \
+		s/^(rpc_address:).*/\1 0.0.0.0/; \
+	' "$CASSANDRA_CONFIG/cassandra.yaml"
+
+RUN sed -i 's/^start_rpc: false/start_rpc: true/' "$CASSANDRA_CONFIG/cassandra.yaml"
+
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+VOLUME /var/lib/cassandra
+
+CMD ["cassandra", "-f"]

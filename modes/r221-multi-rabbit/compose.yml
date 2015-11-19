@@ -1,59 +1,14 @@
-openstack:
-  build: ../../openstack-controller-docker/docker-files/kilo/controller/
-  hostname: openstack
-  environment:
-    MYSQL_ROOT_PASSWORD: c0ntrail123
-    RABBIT_PASS: c0ntrail123
-    KEYSTONE_DBPASS: c0ntrail123
-    GLANCE_DBPASS: c0ntrail123
-    NOVA_DBPASS: c0ntrail123
-    CINDER_DBPASS: c0ntrail123
-    HEAT_DBPASS: c0ntrail123
-    KEYSTONE_PASS: c0ntrail123
-    GLANCE_PASS: c0ntrail123
-    NOVA_PASS: c0ntrail123
-    NEUTRON_PASS: c0ntrail123
-    CINDER_PASS: c0ntrail123
-    HEAT_PASS: c0ntrail123
-    ADMIN_TENANT_NAME: admin
-    ADMIN_TOKEN: c0ntrail123
-    ADMIN_PASS: c0ntrail123
-    DEMO_PASS: c0ntrail123
-    REGION_NAME: RegionOne
-    KEYSTONE_VERSION: v3
-    POLICY_FILE: /etc/keystone/policy.v3.json
-
-ifmap:
-  build: ../../config-node-containers/ifmap-docker
-  #hostname: contrail
-  container_name: ifmap
-  net: container:contrail
-
-contrail:
-  environment:
-    REPO_URL: "http://hajay-repo:8080/juno-R2.21.x-7-juno/"
-    REPO_DISTRO: opencontrail-R2.21.x
-    KEYSTONE: 1
-    ADMIN_USER: admin
-    ADMIN_PASS: c0ntrail123
-    ADMIN_TOKEN: c0ntrail123
-    ADMIN_TENANT_NAME: admin
-    RABBIT_SERVERS: rabbitmq01:5672,rabbitmq02:5672,rabbitmq03:5672
-  build: ../../config-node-containers/contrail-api-docker
-  dockerfile: Dockerfile.r221
-  hostname: contrail
-  container_name: contrail
-  links:
-    - rabbitmq01
-    - rabbitmq02
-    - rabbitmq03
-    - openstack
+#dnsdock:
+#    image: tonistiigi/dnsdock
+#    volumes:
+#        - /var/run/docker.sock:/run/docker.sock
+#    ports:
+#        - 172.17.42.1:53:53/udp
 
 cassandra:
   build: ../../config-node-containers/cassandra-docker
   dockerfile: Dockerfile.contrail
-  #hostname: contrail
-  net: container:contrail
+  hostname: contrail
   volumes: 
     - ~/datadir/:/import-data
   environment:
@@ -63,12 +18,10 @@ cassandra:
 zookeeper:
   build:  ../../config-node-containers/zookeeper-docker
   #hostname: contrail
-  net: container:contrail
 
 rabbitmq01:
   build: ../../config-node-containers/rabbitmq-docker
   hostname: rabbitmq01
-  container_name: rabbitmq01
   environment:
     RABBITMQ_ERLANG_COOKIE: contrail123 # TODO should be $PWD
     RABBITMQ_CLUSTER_NODES: "{['rabbit@rabbitmq01', 'rabbit@rabbitmq02', 'rabbit@rabbitmq03'], disc}"
@@ -95,28 +48,93 @@ rabbitmq03:
     - rabbitmq01
     - rabbitmq02
 
+
+ifmap:
+  build: ../../config-node-containers/ifmap-docker
+  net: container:contrail-api
+
+contrail-discovery:
+  build: ../../config-node-containers/contrail-discovery-docker
+  environment:
+    CASSANDRA_SERVERS: cassandra:9160
+  net: container:contrail-api
+
+contrail-api:
+  environment:
+    REPO_URL: "http://hajay-repo:8080/juno-R2.21.x-7-juno/"
+    REPO_DISTRO: opencontrail-R2.21.x
+    KEYSTONE: 1
+    KEYSTONE_HOST: localhost
+    KEYSTONE_URL: http://localhost:35357/v3
+    ADMIN_USER: admin
+    ADMIN_PASS: c0ntrail123
+    ADMIN_TOKEN: c0ntrail123
+    ADMIN_TENANT_NAME: admin
+    CASSANDRA_SERVERS: cassandra:9160
+    ZOOKEEPER_SERVERS: zookeeper:2181
+    RABBIT_SERVERS: rabbitmq01:5672,rabbitmq02:5672,rabbitmq03:5672
+  build: ../../config-node-containers/contrail-api-docker
+  dockerfile: Dockerfile.r221
+  hostname: contrail-api
+  links:
+    - rabbitmq01
+    - rabbitmq02
+    - rabbitmq03
+    - cassandra
+    - zookeeper
+  #dns: 172.17.42.1
+
+openstack:
+  build: ../../openstack-controller-docker/docker-files/kilo/controller/
+  environment:
+    MYSQL_ROOT_PASSWORD: c0ntrail123
+    RABBIT_PASS: c0ntrail123
+    KEYSTONE_DBPASS: c0ntrail123
+    GLANCE_DBPASS: c0ntrail123
+    NOVA_DBPASS: c0ntrail123
+    CINDER_DBPASS: c0ntrail123
+    HEAT_DBPASS: c0ntrail123
+    KEYSTONE_PASS: c0ntrail123
+    GLANCE_PASS: c0ntrail123
+    NOVA_PASS: c0ntrail123
+    NEUTRON_PASS: c0ntrail123
+    CINDER_PASS: c0ntrail123
+    HEAT_PASS: c0ntrail123
+    ADMIN_TENANT_NAME: admin
+    ADMIN_TOKEN: c0ntrail123
+    ADMIN_PASS: c0ntrail123
+    DEMO_PASS: c0ntrail123
+    REGION_NAME: RegionOne
+    KEYSTONE_VERSION: v3
+    POLICY_FILE: /etc/keystone/policy.v3.json
+    NOVA_HOST: localhost
+    KEYSTONE_HOST: localhost
+    GLANCE_HOST: localhost
+    CINDER_HOST: localhost
+    HEAT_HOST: localhost
+    CFN_HOST: localhost
+    NEUTRON_HOST: contrail-api
+  net: container:contrail-api
+  #dns: 172.17.42.1
+
 contrail-schema:
   #image: contrail-schema-docker
   build: ../../config-node-containers/contrail-schema-docker
-  #hostname: contrail
-  net: container:contrail
+  net: container:contrail-api
   entrypoint: ["/usr/bin/contrail-schema"]
 
 contrail-svc-monitor:
   #image: contrail-svc-monitor-docker
   build: ../../config-node-containers/contrail-svc-monitor-docker
-  #hostname: contrail
-  net: container:contrail
+  net: container:contrail-api
   entrypoint: ["/usr/bin/contrail-svc-monitor"]
-
-contrail-discovery:
-  build: ../../config-node-containers/contrail-discovery-docker
-  #hostname: contrail
-  net: container:contrail
 
 neutron:
   build: ../../config-node-containers/neutron-docker
-  #hostname: contrail
-  net: container:contrail
   environment:
+    CONTRAIL_API_HOST: localhost
+    KEYSTONE_HOST: localhost
+    NEUTRON_USER: admin
     NEUTRON_PASS: c0ntrail123
+    NEUTRON_TENANT_NAME: admin
+  net: container:contrail-api

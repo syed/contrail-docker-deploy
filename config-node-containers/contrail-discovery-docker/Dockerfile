@@ -3,6 +3,7 @@ RUN apt-get install -y software-properties-common curl patch
 RUN apt-add-repository -y ppa:opencontrail
 RUN apt-add-repository -y ppa:opencontrail/r2.20
 RUN apt-get update
+RUN apt-get install -y crudini
 RUN apt-get download contrail-config
 RUN apt-get install -y $(apt-cache depends contrail-config | egrep -v "supervisor|<.*>" | grep Depends | sed "s/.*ends:\ //" | tr '\n' ' ')
 RUN dpkg --unpack contrail-config*.deb
@@ -22,6 +23,7 @@ RUN sed -i 's/ : PROTOCOL_SSLv23/ : PROTOCOL_TLSv1/' /usr/lib/python2.7/dist-pac
 RUN sed -i 's/sys.version_info/False and sys.version_info/' /usr/lib/python2.7/dist-packages/cfgm_common/ifmap/client.py
 
 # TMP Fix discovery server startup issue
-RUN sed -i 's/\(.*update.*DEFAULTS.*\)/#\ \1/' /usr/lib/python2.7/dist-packages/discovery/disc_server.py
+#RUN sed -i 's/\(.*update.*DEFAULTS.*\)/#\ \1/' /usr/lib/python2.7/dist-packages/discovery/disc_server.py
 
-ENTRYPOINT ["/usr/bin/contrail-discovery", "--cassandra_server_list", "127.0.0.1:9160"]
+COPY entrypoint.sh /entrypoint.sh
+ENTRYPOINT /entrypoint.sh
