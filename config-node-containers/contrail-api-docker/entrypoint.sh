@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 
 touch /etc/contrail/contrail-api.conf
 if [ "$KEYSTONE" ]; then
@@ -23,5 +24,15 @@ if [ "$KEYSTONE" ]; then
     fi
 fi
 
-/usr/bin/contrail-api --conf_file /etc/contrail/contrail-api.conf
+if [ "$IMPORT_DB_FILE" ]; then
+    if [ -f /import-data/db.json ]; then
+        echo "Found database file /import-data/db.json, importing..."
+        curl https://gist.githubusercontent.com/ajayhn/9ba42a8697503c7fb832/raw/64d13e3fe75681a7a1a160ad886e6e0e6f7723c9/db-json-exim.py > db-json-exim.py
+        python db-json-exim.py --import-from ${IMPORT_DB_FILE}
+        echo "Database imported. Disabling delete polling from keystone."
+        crudini --set /etc/contrail/contrail-api.conf DEFAULTS keystone_resync_workers 0
+    fi
+fi
 
+echo "Hello world"
+/usr/bin/contrail-api --conf_file /etc/contrail/contrail-api.conf
