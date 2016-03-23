@@ -1,0 +1,153 @@
+FROM ubuntu:14.04
+
+# e.g. docker build --build-arg REPO_URL=http://hajay-repo:8080/kilo-3.0.0.0-2723-kilo/ --build-arg REPO_DIST=opencontrail-R3.0 .
+
+ARG REPO_URL=http://hajay-repo:8080/kilo-3.0.0.0-2723-kilo/
+ARG REPO_DIST=opencontrail-R3.0
+RUN echo "deb ${REPO_URL} ${REPO_DIST} main" >> /etc/apt/sources.list.d/opencontrail.list
+RUN apt-get update
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated curl strace tcpdump
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated cassandra zookeeper rabbitmq-server
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated contrail-config contrail-config-openstack
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated neutron-server neutron-plugin-contrail
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated contrail-control contrail-dns
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated contrail-analytics
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated contrail-web-controller contrail-web-core
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated crudini
+
+# create supervisor-controller config
+RUN mkdir /etc/contrail/supervisord_controller_files
+RUN cp /etc/contrail/supervisord_config_files/*.ini /etc/contrail/supervisord_controller_files/
+RUN cp /etc/contrail/supervisord_analytics_files/*.ini /etc/contrail/supervisord_controller_files/
+RUN cp /etc/contrail/supervisord_control_files/*.ini /etc/contrail/supervisord_controller_files/
+RUN cp /etc/contrail/supervisord_config_files/*.ini /etc/contrail/supervisord_controller_files/
+RUN sed -e 's/supervisord_config/supervisord_controller/g' \
+        -e 's/supervisord-config/supervisord-controller/g' \
+        /etc/contrail/supervisord_config.conf > /etc/contrail/supervisord_controller.conf
+
+# create zookeeper supervisor entry
+RUN echo '\
+[program:zookeeper]\n\
+command = /usr/bin/java -cp /etc/zookeeper/conf:/usr/share/java/jline.jar:/usr/share/java/log4j-1.2.jar:/usr/share/java/xercesImpl.jar:/usr/share/java/xmlParserAPIs.jar:/usr/share/java/netty.jar:/usr/s
+hare/java/slf4j-api.jar:/usr/share/java/slf4j-log4j12.jar:/usr/share/java/zookeeper.jar -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dzookeeper.log.dir=/var/log/zooke
+eper -Dzookeeper.root.logger=INFO,CONSOLE,ROLLINGFILE org.apache.zookeeper.server.quorum.QuorumPeerMain /etc/zookeeper/conf/zoo.cfg\n\
+stdout_logfile = /var/log/zookeeper/zookeeper.out\n\
+stderr_logfile = /var/log/zookeeper/zookeeper.err\n\
+autorestart = true\n\
+stopasgroup=true\n'\
+  >> /etc/contrail/supervisord_controller_files/zookeeper.ini
+
+# create rabbitmq launch file and supervisor entry
+RUN echo "#!/bin/bash\n\
+# call 'rabbitmqctl stop' when exiting\n\
+trap '{ echo Stopping rabbitmq; rabbitmqctl stop; exit 0; }' EXIT\n\
+\n\
+echo Starting rabbitmq\n\
+rabbitmq-server\n"\
+  >> /rabbitmq-launch.sh
+
+RUN chmod a+x /rabbitmq-launch.sh
+
+RUN echo '\
+[program:rabbitmq]\n\
+command=/rabbitmq-launch.sh\n\
+stdout_logfile = /var/log/rabbitmq/rabbitmq.out\n\
+stderr_logfile = /var/log/rabbitmq/rabbitmq.err\n\
+autorestart = true\n\
+stopasgroup=true\n'\
+  >> /etc/contrail/supervisord_controller_files/rabbitmq.ini
+
+# create cassandra supervisor entry
+RUN echo '\
+[program:cassandra]\n\
+command=cassandra -f\n\
+stdout_logfile = /var/log/cassandra/cassandra.out\n\
+stderr_logfile = /var/log/cassandra/cassandra.err\n\
+autorestart = true\n\
+stopasgroup=true\n'\
+  >> /etc/contrail/supervisord_controller_files/cassandra.ini
+
+# create webui supervisor entry
+RUN echo '\
+[program:contrail-webui]\n\
+directory= /usr/src/contrail/contrail-web-core\n\
+command= bash -c "node webServerStart.js"\n\
+priority=420\n\
+autostart=true\n\
+killasgroup=true\n\
+stopsignal=KILL\n\
+stdout_capture_maxbytes=1MB\n\
+redirect_stderr=true\n\
+stdout_logfile=/var/log/contrail/contrail-webui-stdout.log\n\
+stderr_logfile=/dev/null\n\
+startretries=10\n\
+startsecs=5\n\
+exitcodes=0\n'\
+  >> /etc/contrail/supervisord_controller_files/contrail-webui.ini
+
+# create webui-middleware supervisor entry
+RUN echo '\
+[program:contrail-webui-middleware]\n\
+directory= /usr/src/contrail/contrail-web-core\n\
+command= bash -c "node jobServerStart.js"\n\
+priority=420\n\
+autostart=true\n\
+killasgroup=true\n\
+stopsignal=KILL\n\
+stdout_capture_maxbytes=1MB\n\
+redirect_stderr=true\n\
+stdout_logfile=/var/log/contrail/contrail-webui-middleware-stdout.log\n\
+stderr_logfile=/dev/null\n\
+startretries=10\n\
+startsecs=5\n\
+exitcodes=0\n'\
+  >> /etc/contrail/supervisord_controller_files/contrail-webui-middleware.ini
+
+# create neutron supervisor entry
+RUN echo '\
+[program:neutron-server]\n\
+command=/usr/bin/neutron-server\n\
+priority=520\n\
+autostart=true\n\
+killasgroup=true\n\
+stopsignal=KILL\n\
+stdout_capture_maxbytes=1MB\n\
+redirect_stderr=true\n\
+stdout_logfile=/var/log/neutron/neutron-server-stdout.log\n\
+stderr_logfile=/dev/null\n\
+startsecs=5\n\
+exitcodes=0\n\
+user=neutron\n'\
+  >> /etc/contrail/supervisord_controller_files/neutron.ini
+
+# Provision neutron
+RUN crudini --set /etc/neutron/neutron.conf DEFAULT core_plugin neutron_plugin_contrail.plugins.opencontrail.contrail_plugin.NeutronPluginContrailCoreV2
+RUN crudini --set /etc/neutron/neutron.conf DEFAULT allow_overlapping_ips True
+RUN crudini --set /etc/neutron/neutron.conf DEFAULT api_extensions_path extensions:/usr/lib/python2.7/dist-packages/neutron_plugin_contrail/extensions
+RUN crudini --set /etc/neutron/neutron.conf APISERVER contrail_extensions ipam:neutron_plugin_contrail.plugins.opencontrail.contrail_plugin_ipam.NeutronPluginContrailIpam,policy:neutron_plugin_contrail
+.plugins.opencontrail.contrail_plugin_policy.NeutronPluginContrailPolicy,route-table:neutron_plugin_contrail.plugins.opencontrail.contrail_plugin_vpc.NeutronPluginContrailVpc,contrail:None
+RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_uri http://localhost:35357/v3
+RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken identity_uri http://localhost:5000
+RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken admin_tenant_name admin
+RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken admin_user neutron
+RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken admin_password openstack
+RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_host localhost
+RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_port 35357
+RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_protocol http
+RUN crudini --set /etc/neutron/neutron.conf quotas quota_driver neutron_plugin_contrail.plugins.opencontrail.quota.driver.QuotaDriver
+
+# Provision contrail-api interface to keystone
+RUN touch /etc/contrail/contrail-keystone-auth.conf
+RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE auth_url http://localhost:35357/v3
+RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE admin_tenant_name admin
+RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE admin_user admin
+RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE admin_password openstack
+RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE auth_host localhost
+RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE auth_port 35357
+RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE auth_protocol http
+RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE admin_user_domain_name  Default
+RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE project_domain_name Default
+RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE project_name admin
+
+ADD . /docker-build
+ENTRYPOINT /usr/bin/supervisord --nodaemon -c /etc/contrail/supervisord_controller.conf

@@ -3,11 +3,12 @@ FROM ubuntu:14.04
 RUN apt-get update
 RUN apt-get install -y software-properties-common curl patch
 RUN add-apt-repository cloud-archive:kilo
-RUN echo "deb http://hajay-repo:8080/juno-R2.21.2-25-juno/ opencontrail-R2.21.x main" > /etc/apt/sources.list.d/opencontrail.list
+RUN echo "deb http://hajay-repo:8080/kilo-mainline-2696-kilo/ opencontrail-mainline main" > /etc/apt/sources.list.d/opencontrail.list
 RUN apt-get update
 RUN apt-get install -y crudini
 RUN apt-get install -y --allow-unauthenticated contrail-config
 RUN apt-get install -y --allow-unauthenticated contrail-config-openstack
 
 COPY entrypoint.sh /entrypoint.sh
+COPY Dockerfile.mainline /
 ENTRYPOINT /entrypoint.sh

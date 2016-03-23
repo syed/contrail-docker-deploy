@@ -7,7 +7,6 @@ RUN echo "deb http://hajay-repo:8080/juno-R2.21.2-25-juno/ opencontrail-R2.21.x 
 RUN apt-get update
 RUN apt-get install -y crudini
 RUN apt-get install -y --allow-unauthenticated contrail-config
-RUN apt-get install -y --allow-unauthenticated contrail-config-openstack
 
 COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT /entrypoint.sh

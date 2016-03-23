@@ -1,0 +1,29 @@
+FROM ubuntu:14.04
+
+# e.g. docker build --build-arg REPO_URL=http://hajay-repo:8080/kilo-3.0.0.0-2723-kilo/ --build-arg REPO_DIST=opencontrail-R3.0 \
+#                   --build-arg EXPORTED_DB_JSON=scale-config-db.json .
+
+ARG REPO_URL=http://hajay-repo:8080/kilo-3.0.0.0-2723-kilo/
+ARG REPO_DIST=opencontrail-R3.0
+ARG EXPORTED_DB_JSON=db.json
+RUN echo "deb ${REPO_URL} ${REPO_DIST} main" >> /etc/apt/sources.list.d/opencontrail.list
+RUN apt-get update
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated curl strace tcpdump
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated cassandra zookeeper
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated contrail-config
+
+# zookeeper launcher
+RUN echo '/usr/bin/java -cp /etc/zookeeper/conf:/usr/share/java/jline.jar:/usr/share/java/log4j-1.2.jar:/usr/share/java/xercesImpl.jar:/usr/share/java/xmlParserAPIs.jar:/usr/share/java/netty.jar:/usr/share/java/slf4j-api.jar:/usr/share/java/slf4j-log4j12.jar:/usr/share/java/zookeeper.jar -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dzookeeper.log.dir=/var/log/zookeeper -Dzookeeper.root.logger=INFO,CONSOLE,ROLLINGFILE org.apache.zookeeper.server.quorum.QuorumPeerMain /etc/zookeeper/conf/zoo.cfg &' >> /launch_zookeeper.sh
+RUN chmod a+x /launch_zookeeper.sh
+
+# cassandra launcher
+RUN echo '/usr/sbin/cassandra -f &' >> /launch_cassandra.sh
+RUN chmod a+x /launch_cassandra.sh
+
+# fetch the import script
+RUN curl https://gist.githubusercontent.com/ajayhn/9ba42a8697503c7fb832/raw/dccbeed80e7f6532ac33d3b0e0a03a0a04aba493/db-json-exim.py > /db-json-exim.py
+
+ADD . /docker-build
+RUN ln -sf /docker-build/${EXPORTED_DB_JSON} /db.json
+
+RUN /launch_zookeeper.sh && /launch_cassandra.sh && python /db-json-exim.py --import_from /db.json

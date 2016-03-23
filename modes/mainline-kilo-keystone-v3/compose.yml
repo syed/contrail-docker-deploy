@@ -20,28 +20,24 @@ ifmap:
 
 contrail-discovery:
   build: ../../config-node-containers/contrail-discovery-docker
-  dockerfile: Dockerfile.r221
   environment:
     CASSANDRA_SERVERS: cassandra:9160
   net: container:contrail-api
 
 contrail-api:
   environment:
-    REPO_URL: "http://hajay-repo:8080/juno-R2.21.x-7-juno/"
-    REPO_DISTRO: opencontrail-R2.21.x
     KEYSTONE: 1
     KEYSTONE_HOST: localhost
     KEYSTONE_URL: http://localhost:35357/v3
     ADMIN_USER: admin
     ADMIN_PASS: c0ntrail123
-    ADMIN_TOKEN: c0ntrail123
+    #ADMIN_TOKEN: c0ntrail123
     ADMIN_TENANT_NAME: admin
     CASSANDRA_SERVERS: cassandra:9160
     ZOOKEEPER_SERVERS: zookeeper:2181
     RABBIT_SERVERS: rabbitmq:5672
-    IMPORT_DB_FILE: /import-data/db.json
   build: ../../config-node-containers/contrail-api-docker
-  dockerfile: Dockerfile.r221
+  dockerfile: Dockerfile.mainline
   hostname: contrail-api
   links:
     - rabbitmq
@@ -86,14 +82,12 @@ openstack:
 contrail-schema:
   #image: contrail-schema-docker
   build: ../../config-node-containers/contrail-schema-docker
-  dockerfile: Dockerfile.r221
   net: container:contrail-api
   entrypoint: ["/usr/bin/contrail-schema"]
 
 contrail-svc-monitor:
   #image: contrail-svc-monitor-docker
   build: ../../config-node-containers/contrail-svc-monitor-docker
-  dockerfile: Dockerfile.r221
   net: container:contrail-api
   entrypoint: ["/usr/bin/contrail-svc-monitor"]
 

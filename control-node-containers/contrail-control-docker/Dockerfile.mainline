@@ -1,0 +1,11 @@
+FROM ubuntu:14.04
+
+RUN apt-get update
+RUN echo "deb http://hajay-repo:8080/kilo-mainline-2696-kilo/ opencontrail-mainline main" > /etc/apt/sources.list.d/opencontrail.list
+RUN apt-get update
+RUN apt-get install -y crudini
+RUN apt-get install -y --allow-unauthenticated contrail-control
+
+COPY entrypoint.sh /entrypoint.sh
+COPY Dockerfile.mainline /
+ENTRYPOINT /entrypoint.sh

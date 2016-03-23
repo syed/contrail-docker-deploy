@@ -34,5 +34,4 @@ if [ "$IMPORT_DB_FILE" ]; then
     fi
 fi
 
-echo "Hello world"
 /usr/bin/contrail-api --conf_file /etc/contrail/contrail-api.conf

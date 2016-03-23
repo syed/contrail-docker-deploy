@@ -1,0 +1,1 @@
+(COMPOSE_PROJECT_NAME=$(basename $PWD) docker-compose -f compose.yml -p $(basename $PWD) up -d)
