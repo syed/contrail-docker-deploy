@@ -1,18 +1,18 @@
 FROM ubuntu:14.04
 
-# e.g. docker build --build-arg REPO_URL=http://hajay-repo:8080/kilo-3.0.0.0-2723-kilo/ --build-arg REPO_DIST=opencontrail-R3.0 .
+# e.g. docker build --build-arg REPO_URL=http://apt.tcpcloud.eu/nightly/ --build-arg REPO_DIST=trusty main security extra tcp oc30 kilo' .
 
-ARG REPO_URL=http://hajay-repo:8080/kilo-3.0.0.0-2723-kilo/
-ARG REPO_DIST=opencontrail-R3.0
-RUN echo "deb ${REPO_URL} ${REPO_DIST} main" >> /etc/apt/sources.list.d/opencontrail.list
+ARG REPO_URL=http://apt.tcpcloud.eu/nightly/
+ARG REPO_DIST='trusty main security extra tcp oc30 kilo'
+RUN echo "deb ${REPO_URL} ${REPO_DIST}" > /etc/apt/sources.list
 RUN apt-get update
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated curl strace tcpdump
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated cassandra zookeeper rabbitmq-server
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated curl strace tcpdump python-kafka-python
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated cassandra python-cassandra zookeeper rabbitmq-server
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated contrail-config contrail-config-openstack
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated neutron-server neutron-plugin-contrail
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated contrail-control contrail-dns
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated contrail-analytics
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated contrail-web-controller contrail-web-core
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated contrail-web-controller nodejs-legacy contrail-web-core
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated crudini
 
 # create supervisor-controller config
@@ -25,17 +25,26 @@ RUN sed -e 's/supervisord_config/supervisord_controller/g' \
         -e 's/supervisord-config/supervisord-controller/g' \
         /etc/contrail/supervisord_config.conf > /etc/contrail/supervisord_controller.conf
 
+# fix Cassandra bug https://issues.apache.org/jira/browse/CASSANDRA-11661
+RUN sed -i 's/< "25"/-lt "25"/g' /etc/cassandra/cassandra-env.sh
+
 # create zookeeper supervisor entry
-RUN echo '\
-[program:zookeeper]\n\
-command = /usr/bin/java -cp /etc/zookeeper/conf:/usr/share/java/jline.jar:/usr/share/java/log4j-1.2.jar:/usr/share/java/xercesImpl.jar:/usr/share/java/xmlParserAPIs.jar:/usr/share/java/netty.jar:/usr/s
-hare/java/slf4j-api.jar:/usr/share/java/slf4j-log4j12.jar:/usr/share/java/zookeeper.jar -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dzookeeper.log.dir=/var/log/zooke
-eper -Dzookeeper.root.logger=INFO,CONSOLE,ROLLINGFILE org.apache.zookeeper.server.quorum.QuorumPeerMain /etc/zookeeper/conf/zoo.cfg\n\
+RUN echo '[program:zookeeper]\n\
+command = /usr/bin/java -cp /etc/zookeeper/conf:/usr/share/java/jline.jar:/usr/share/java/log4j-1.2.jar:/usr/share/java/xercesImpl.jar:/usr/share/java/xmlParserAPIs.jar:/usr/share/java/netty.jar:/usr/share/java/slf4j-api.jar:/usr/share/java/slf4j-log4j12.jar:/usr/share/java/zookeeper.jar -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dzookeeper.log.dir=/var/log/zookeeper -Dzookeeper.root.logger=INFO,CONSOLE,ROLLINGFILE org.apache.zookeeper.server.quorum.QuorumPeerMain /etc/zookeeper/conf/zoo.cfg\n\
 stdout_logfile = /var/log/zookeeper/zookeeper.out\n\
 stderr_logfile = /var/log/zookeeper/zookeeper.err\n\
 autorestart = true\n\
-stopasgroup=true\n'\
+stopasgroup=true'\
   >> /etc/contrail/supervisord_controller_files/zookeeper.ini
+
+# create redis supervisor entry
+RUN echo '[program:redis]\n\
+command = /usr/bin/redis-server\n\
+stdout_logfile = /var/log/redis/redis-server.log\n\
+stderr_logfile = /var/log/redis/redis-server.log\n\
+autorestart = true\n\
+stopasgroup=true'\
+  >> /etc/contrail/supervisord_controller_files/redis.ini
 
 # create rabbitmq launch file and supervisor entry
 RUN echo "#!/bin/bash\n\
@@ -70,7 +79,7 @@ stopasgroup=true\n'\
 # create webui supervisor entry
 RUN echo '\
 [program:contrail-webui]\n\
-directory= /usr/src/contrail/contrail-web-core\n\
+directory=/var/lib/contrail-webui/contrail-web-core\n\
 command= bash -c "node webServerStart.js"\n\
 priority=420\n\
 autostart=true\n\
@@ -88,7 +97,7 @@ exitcodes=0\n'\
 # create webui-middleware supervisor entry
 RUN echo '\
 [program:contrail-webui-middleware]\n\
-directory= /usr/src/contrail/contrail-web-core\n\
+directory=/var/lib/contrail-webui/contrail-web-core\n\
 command= bash -c "node jobServerStart.js"\n\
 priority=420\n\
 autostart=true\n\
@@ -124,8 +133,7 @@ user=neutron\n'\
 RUN crudini --set /etc/neutron/neutron.conf DEFAULT core_plugin neutron_plugin_contrail.plugins.opencontrail.contrail_plugin.NeutronPluginContrailCoreV2
 RUN crudini --set /etc/neutron/neutron.conf DEFAULT allow_overlapping_ips True
 RUN crudini --set /etc/neutron/neutron.conf DEFAULT api_extensions_path extensions:/usr/lib/python2.7/dist-packages/neutron_plugin_contrail/extensions
-RUN crudini --set /etc/neutron/neutron.conf APISERVER contrail_extensions ipam:neutron_plugin_contrail.plugins.opencontrail.contrail_plugin_ipam.NeutronPluginContrailIpam,policy:neutron_plugin_contrail
-.plugins.opencontrail.contrail_plugin_policy.NeutronPluginContrailPolicy,route-table:neutron_plugin_contrail.plugins.opencontrail.contrail_plugin_vpc.NeutronPluginContrailVpc,contrail:None
+RUN crudini --set /etc/neutron/neutron.conf APISERVER contrail_extensions ipam:neutron_plugin_contrail.plugins.opencontrail.contrail_plugin_ipam.NeutronPluginContrailIpam,policy:neutron_plugin_contrail.plugins.opencontrail.contrail_plugin_policy.NeutronPluginContrailPolicy,route-table:neutron_plugin_contrail.plugins.opencontrail.contrail_plugin_vpc.NeutronPluginContrailVpc,contrail:None
 RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_uri http://localhost:35357/v3
 RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken identity_uri http://localhost:5000
 RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken admin_tenant_name admin
