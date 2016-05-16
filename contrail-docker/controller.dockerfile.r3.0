@@ -138,7 +138,7 @@ RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_uri http://l
 RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken identity_uri http://localhost:5000
 RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken admin_tenant_name admin
 RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken admin_user neutron
-RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken admin_password openstack
+RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken admin_password c0ntrail123
 RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_host localhost
 RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_port 35357
 RUN crudini --set /etc/neutron/neutron.conf keystone_authtoken auth_protocol http
@@ -149,7 +149,7 @@ RUN touch /etc/contrail/contrail-keystone-auth.conf
 RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE auth_url http://localhost:35357/v3
 RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE admin_tenant_name admin
 RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE admin_user admin
-RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE admin_password openstack
+RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE admin_password c0ntrail123
 RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE auth_host localhost
 RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE auth_port 35357
 RUN crudini --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE auth_protocol http

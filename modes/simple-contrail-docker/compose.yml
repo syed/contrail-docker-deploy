@@ -1,0 +1,37 @@
+openstack:
+  build: ../../../openstack-controller-docker/docker-files/kilo/controller/
+  environment:
+    MYSQL_ROOT_PASSWORD: c0ntrail123
+    RABBIT_PASS: c0ntrail123
+    KEYSTONE_DBPASS: c0ntrail123
+    GLANCE_DBPASS: c0ntrail123
+    NOVA_DBPASS: c0ntrail123
+    CINDER_DBPASS: c0ntrail123
+    HEAT_DBPASS: c0ntrail123
+    KEYSTONE_PASS: c0ntrail123
+    GLANCE_PASS: c0ntrail123
+    NOVA_PASS: c0ntrail123
+    NEUTRON_PASS: c0ntrail123
+    CINDER_PASS: c0ntrail123
+    HEAT_PASS: c0ntrail123
+    ADMIN_TENANT_NAME: admin
+    ADMIN_TOKEN: c0ntrail123
+    ADMIN_PASS: c0ntrail123
+    DEMO_PASS: c0ntrail123
+    REGION_NAME: RegionOne
+    KEYSTONE_VERSION: v3
+    POLICY_FILE: /etc/keystone/policy.v3.json
+    NOVA_HOST: localhost
+    KEYSTONE_HOST: localhost
+    GLANCE_HOST: localhost
+    CINDER_HOST: localhost
+    HEAT_HOST: localhost
+    CFN_HOST: localhost
+    NEUTRON_HOST: contrail-api
+  net: container:contrail
+  #dns: 172.17.42.1
+
+contrail:
+  build: ../../contrail-docker/
+  dockerfile: controller.dockerfile.r3.0
+  hostname: contrail-api
