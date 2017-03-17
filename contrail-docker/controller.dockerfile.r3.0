@@ -6,7 +6,7 @@ ARG REPO_URL=http://apt.tcpcloud.eu/nightly/
 ARG REPO_DIST='trusty main security extra tcp oc30 kilo'
 RUN echo "deb ${REPO_URL} ${REPO_DIST}" > /etc/apt/sources.list
 RUN apt-get update
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated curl strace tcpdump python-kafka-python
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated curl strace tcpdump python-kafka
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated cassandra python-cassandra zookeeper rabbitmq-server
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated contrail-config contrail-config-openstack
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated neutron-server neutron-plugin-contrail

@@ -1,5 +1,5 @@
 #!/bin/bash
 set -x
 
-#/usr/bin/contrail-vrouter-agent
-/bin/bash
+/usr/bin/contrail-vrouter-agent
+# /bin/bash
